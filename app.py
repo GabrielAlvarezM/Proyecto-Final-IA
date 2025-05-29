@@ -2,6 +2,19 @@ import streamlit as st
 import joblib
 import numpy as np
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-image: url("https://images.unsplash.com/photo-1506744038136-46273834b3fb");
+        background-size: cover;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 modelo_vuelo_economica = joblib.load('models/modelo_vuelo_economica.pkl')
 modelo_vuelo_ejecutiva = joblib.load('models/modelo_vuelo_ejecutiva.pkl')
 modelo_vuelo_primera = joblib.load('models/modelo_vuelo_primera.pkl')
@@ -22,7 +35,7 @@ clase_dict = {
     'Primera': modelo_vuelo_primera
 }
 
-st.title("Predicción de precios de viaje ✈️🏨")
+st.title("Predicción de precios de viaje 🏨✈️✈️✈️✈️✈️✈️🏨")
 
 anio = st.number_input("Año del viaje", min_value=2000, max_value=2100, value=2025)
 distancia = st.number_input("Distancia del vuelo (km)", min_value=1)
