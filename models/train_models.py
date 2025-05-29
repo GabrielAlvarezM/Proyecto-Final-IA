@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Patch
+import joblib
+
 
 def filtrar_por_ciudad(diccionario, ciudad):
     filtrado = {col: [] for col in diccionario if col != 'Tipo_Hospedaje_Num'}
@@ -82,9 +84,9 @@ X = np.array(diccionarioVuelosEconomica['Distancia_km']).reshape(-1, 1)
 Y = np.array(diccionarioVuelosEconomica['Precio_USD'])
 
 X_Combinada = np.column_stack((Z, X))
-modelo_anio_kmpl = LinearRegression().fit(X_Combinada, Y)
-
-print(f"Puntuacion regresion multiple (Año y Distancia) economicos: {modelo_anio_kmpl.score(X_Combinada, Y)}")
+modelo_vuelo_economica = LinearRegression().fit(X_Combinada, Y)
+print(f"Puntuacion regresion multiple (Año y Distancia) economicos: {modelo_vuelo_economica.score(X_Combinada, Y)}")
+joblib.dump(modelo_vuelo_economica, 'models/modelo_vuelo_economica.pkl')
 
 # Regresión Vuelos ejecutivos
 Z = np.array(list(map(int, diccionarioVuelosEjecutiva['anio']))).reshape(-1, 1)
@@ -92,9 +94,9 @@ X = np.array(diccionarioVuelosEjecutiva['Distancia_km']).reshape(-1, 1)
 Y = np.array(diccionarioVuelosEjecutiva['Precio_USD'])
 
 X_Combinada = np.column_stack((Z, X))
-modelo_anio_kmpl = LinearRegression().fit(X_Combinada, Y)
-
-print(f"Puntuacion regresion multiple (Año y Distancia) ejecutivos: {modelo_anio_kmpl.score(X_Combinada, Y)}")
+modelo_vuelo_ejecutiva = LinearRegression().fit(X_Combinada, Y)
+print(f"Puntuacion regresion multiple (Año y Distancia) ejecutivos: {modelo_vuelo_ejecutiva.score(X_Combinada, Y)}")
+joblib.dump(modelo_vuelo_ejecutiva, 'models/modelo_vuelo_ejecutiva.pkl')
 
 # Regresión Vuelos primera
 Z = np.array(list(map(int, diccionarioVuelosPrimClase['anio']))).reshape(-1, 1)
@@ -102,9 +104,9 @@ X = np.array(diccionarioVuelosPrimClase['Distancia_km']).reshape(-1, 1)
 Y = np.array(diccionarioVuelosPrimClase['Precio_USD'])
 
 X_Combinada = np.column_stack((Z, X))
-modelo_anio_kmpl = LinearRegression().fit(X_Combinada, Y)
-
-print(f"Puntuacion regresion multiple (Año y Distancia) primera clase: {modelo_anio_kmpl.score(X_Combinada, Y)}")
+modelo_vuelo_primera = LinearRegression().fit(X_Combinada, Y)
+print(f"Puntuacion regresion multiple (Año y Distancia) primera clase: {modelo_vuelo_primera.score(X_Combinada, Y)}")
+joblib.dump(modelo_vuelo_primera, 'models/modelo_vuelo_primera.pkl')
 
 print( len(next(iter(diccionarioVuelosEconomica.values()))) )
 print( len(next(iter(diccionarioVuelosEjecutiva.values()))) )
@@ -120,6 +122,6 @@ X = np.array(diccionarioHospedajeEspecifico['Tipo_Hospedaje_Num'], dtype=float).
 Y = np.array(diccionarioHospedajeEspecifico['Precio_Noche_USD'], dtype=float)
 
 X_Combinada = np.column_stack((Z, X))
-modelo_anio_kmpl = LinearRegression().fit(X_Combinada, Y)
-
-print(f"Puntuacion regresion multiple (Año y Distancia) hospedaje: {modelo_anio_kmpl.score(X_Combinada, Y)}")
+modelo_hospedaje = LinearRegression().fit(X_Combinada, Y)
+print(f"Puntuacion regresion multiple (Año y Tipo hospedaje) general: {modelo_hospedaje.score(X_Combinada, Y)}")
+joblib.dump(modelo_hospedaje, 'models/modelo_hospedaje_general.pkl')
