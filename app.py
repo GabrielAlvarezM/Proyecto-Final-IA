@@ -73,10 +73,11 @@ def obtener_coordenadas(ciudad):
     except Exception:
         return None
 
-# -- App --
-st.title("Calculadora de Viajes")
+# App
 
 if st.session_state.paso == 1:
+    st.image("imagen logo/expepibe_logo.png", use_container_width=False)
+
     st.header("1. Elige la clase de vuelo")
     clase_idx = image_select(
         label="Selecciona la clase de vuelo",
@@ -162,6 +163,7 @@ elif st.session_state.paso == 3:
 elif st.session_state.paso == 4:
     st.header("4. Detalles finales del viaje")
 
+    #el 8000 es distancia default
     distancia = st.session_state.get("distancia_real", 8000)
     st.info(f"Distancia calculada automáticamente: **{distancia:.2f} km**")
 
@@ -204,34 +206,34 @@ elif st.session_state.paso == 4:
         }
                 
             
-    modelo_clase = st.session_state.get("clase", "Economica")
-    ruta_modelo = modelo_path.get(modelo_clase)
+        modelo_clase = st.session_state.get("clase", "Economica")
+        ruta_modelo = modelo_path.get(modelo_clase)
 
-    try:
-        # Cargar el modelo y el scaler
-        modelo_vuelo, scaler_vuelo = joblib.load(ruta_modelo)
+        try:
+            # Cargar el modelo y el scaler
+            modelo_vuelo, scaler_vuelo = joblib.load(ruta_modelo)
 
-        fecha_viaje = st.session_state.get("fecha_viaje", datetime.date.today())
-        fecha_ordinal = fecha_viaje.toordinal()
+            fecha_viaje = st.session_state.get("fecha_viaje", datetime.date.today())
+            fecha_ordinal = fecha_viaje.toordinal()
 
-        X_pred_vuelo = np.array([[fecha_ordinal, distancia]])
-        X_pred_vuelo_scaled = scaler_vuelo.transform(X_pred_vuelo)
+            X_pred_vuelo = np.array([[fecha_ordinal, distancia]])
+            X_pred_vuelo_scaled = scaler_vuelo.transform(X_pred_vuelo)
 
-        # Predeciccion
-        precio_vuelo = max(0, modelo_vuelo.predict(X_pred_vuelo_scaled)[0])
+            # Predeciccion
+            precio_vuelo = max(0, modelo_vuelo.predict(X_pred_vuelo_scaled)[0])
 
-    except Exception as e:
-        st.error(f"No se pudo cargar el modelo para la clase {modelo_clase.lower()}: {e}")
+        except Exception as e:
+            st.error(f"No se pudo cargar el modelo para la clase {modelo_clase.lower()}: {e}")
 
 
-    st.session_state.resultado = {
-        "vuelo": precio_vuelo,
-        "hospedaje": precio_total,
-        "dias": dias,
-        "precio_noche": precio_noche
-    }
-    st.session_state.paso = 5
-    st.rerun()
+        st.session_state.resultado = {
+            "vuelo": precio_vuelo,
+            "hospedaje": precio_total,
+            "dias": dias,
+            "precio_noche": precio_noche
+        }
+        st.session_state.paso = 5
+        st.rerun()
 
     if st.button("Regresar", key="reg3"):
         st.session_state.paso = 3
