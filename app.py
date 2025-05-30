@@ -11,7 +11,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 import joblib
 
-# -- Diccionarios de imágenes y hospedaje --
+# Diccionarios de imágenes y hospedaje 
 img_clases = {
     "Economica": "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
     "Ejecutiva": "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
@@ -44,11 +44,10 @@ modelo_path = {
 
 
 
-# -- Inicialización --
 if "paso" not in st.session_state:
     st.session_state.paso = 1
 
-# -- Cargar CSV con hospedajes para obtener ciudades --
+# Cargar CSV con hospedajes para obtener ciudades 
 @st.cache_data
 def cargar_ciudades_desde_csv():
     df = pd.read_csv('.\\Datasets\\precios_hospedaje_mundial.csv')
@@ -56,7 +55,7 @@ def cargar_ciudades_desde_csv():
     return ciudades_unicas
 ciudades = cargar_ciudades_desde_csv()
 
-# -- Geocoder --
+# Geocoder 
 geolocator = Nominatim(user_agent="mi_app_de_viajes")
 coordenadas_cache = {}
 
@@ -103,7 +102,7 @@ elif st.session_state.paso == 2:
 
         if coord_origen and coord_destino:
             distancia_km = geodesic(coord_origen, coord_destino).kilometers
-            st.success(f"✈️ Distancia estimada entre {origen_select} y {destino_select}: **{distancia_km:.2f} km**")
+            st.success(f"Distancia estimada entre {origen_select} y {destino_select}: **{distancia_km:.2f} km**")
 
             st.session_state.distancia_real = distancia_km
 
@@ -153,7 +152,6 @@ elif st.session_state.paso == 3:
     if st.button("Siguiente", key="sig3"):
         if tipo and fecha_viaje:
             st.session_state.tipo_hospedaje = tipo
-            # No reasignar st.session_state.fecha_viaje, ya lo guarda date_input
             st.session_state.paso = 4
             st.rerun()
 
@@ -198,7 +196,7 @@ elif st.session_state.paso == 4:
         precio_noche = max(0, modelo.predict(X_pred_scaled)[0])
         precio_total = precio_noche * dias
 
-        # Cargar modelo según clase
+        # Cargar modelo dela clase clase
         modelo_path = {
             "Economica": "./models/modelo_vuelo_economica.pkl",
             "Ejecutiva": "./models/modelo_vuelo_ejecutiva.pkl",
@@ -216,16 +214,14 @@ elif st.session_state.paso == 4:
         fecha_viaje = st.session_state.get("fecha_viaje", datetime.date.today())
         fecha_ordinal = fecha_viaje.toordinal()
 
-        # Crear el input con las dos características: fecha ordinal y distancia
         X_pred_vuelo = np.array([[fecha_ordinal, distancia]])
         X_pred_vuelo_scaled = scaler_vuelo.transform(X_pred_vuelo)
 
-        # Predecir el precio del vuelo
+        # Predeciccion
         precio_vuelo = max(0, modelo_vuelo.predict(X_pred_vuelo_scaled)[0])
 
     except Exception as e:
         st.error(f"No se pudo cargar el modelo para la clase {modelo_clase.lower()}: {e}")
-        precio_vuelo = distancia * 0.1  # Fallback simple
 
 
     st.session_state.resultado = {

@@ -61,7 +61,7 @@ def entrenar_modelo(X_raw, Y, descripcion, ruta_modelo):
     joblib.dump((modelo, scaler), ruta_modelo)
     return modelo, scaler
 
-# ========= Regresiones de vuelos =========
+# Regresiones de vuelos 
 # Económica
 fecha_ord = np.array(diccionarioVuelosEconomica['Fecha_Ordinal']).reshape(-1, 1)
 dist = np.array(diccionarioVuelosEconomica['Distancia_km']).reshape(-1, 1)
@@ -83,7 +83,7 @@ precio = np.array(diccionarioVuelosPrimClase['Precio_USD'])
 X_combinada = np.column_stack((fecha_ord, dist))
 entrenar_modelo(X_combinada, precio, 'Vuelos Primera Clase (fecha ordinal y distancia)', 'models/modelo_vuelo_primera.pkl')
 
-# ========= Regresión de hospedaje =========
+#  Regresión de hospedaje 
 ciudad = 'Moscú'
 diccionarioHospedajeEspecifico = filtrar_por_ciudad(diccionarioHospedaje, ciudad)
 
