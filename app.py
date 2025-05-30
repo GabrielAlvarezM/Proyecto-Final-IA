@@ -9,11 +9,12 @@ from geopy.geocoders import Nominatim
 import datetime
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
+import joblib
 
 # -- Diccionarios de imágenes y hospedaje --
 img_clases = {
-    "Economía": "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
-    "Business": "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
+    "Economica": "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
+    "Ejecutiva": "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
     "Primera": "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1"
 }
 
@@ -34,6 +35,14 @@ tipo_hospedaje_dict = {
     'Hotel 5 estrellas': 4,
     'Airbnb': 0.5
 }
+
+modelo_path = {
+    "Economica": "models/modelo_vuelo_economica.pkl",
+    "Ejecutiva": "models/modelo_vuelo_ejecutiva.pkl",
+    "Primera": "models/modelo_vuelo_primera.pkl"
+}
+
+
 
 # -- Inicialización --
 if "paso" not in st.session_state:
@@ -80,7 +89,7 @@ if st.session_state.paso == 1:
         if clase_idx is not None:
             st.session_state.clase = list(img_clases.keys())[clase_idx]
             st.session_state.paso = 2
-            st.experimental_rerun()
+            st.rerun()
 
 elif st.session_state.paso == 2:
     st.header("2. Elige tu origen y destino")
@@ -122,11 +131,11 @@ elif st.session_state.paso == 2:
             st.session_state.origen = origen_select
             st.session_state.destino = destino_select
             st.session_state.paso = 3
-            st.experimental_rerun()
+            st.rerun()
 
     if st.button("Regresar", key="reg1"):
         st.session_state.paso = 1
-        st.experimental_rerun()
+        st.rerun()
 
 elif st.session_state.paso == 3:
     st.header("3. Elige el tipo de hospedaje y fecha de viaje")
@@ -146,11 +155,11 @@ elif st.session_state.paso == 3:
             st.session_state.tipo_hospedaje = tipo
             # No reasignar st.session_state.fecha_viaje, ya lo guarda date_input
             st.session_state.paso = 4
-            st.experimental_rerun()
+            st.rerun()
 
     if st.button("Regresar", key="reg2"):
         st.session_state.paso = 2
-        st.experimental_rerun()
+        st.rerun()
 
 elif st.session_state.paso == 4:
     st.header("4. Detalles finales del viaje")
@@ -189,20 +198,49 @@ elif st.session_state.paso == 4:
         precio_noche = max(0, modelo.predict(X_pred_scaled)[0])
         precio_total = precio_noche * dias
 
-        precio_vuelo = distancia * 0.1  # Ejemplo simple
-
-        st.session_state.resultado = {
-            "vuelo": precio_vuelo,
-            "hospedaje": precio_total,
-            "dias": dias,
-            "precio_noche": precio_noche
+        # Cargar modelo según clase
+        modelo_path = {
+            "Economica": "./models/modelo_vuelo_economica.pkl",
+            "Ejecutiva": "./models/modelo_vuelo_ejecutiva.pkl",
+            "Primera": "./models/modelo_vuelo_primera.pkl"
         }
-        st.session_state.paso = 5
-        st.experimental_rerun()
+                
+            
+    modelo_clase = st.session_state.get("clase", "Economica")
+    ruta_modelo = modelo_path.get(modelo_clase)
+
+    try:
+        # Cargar el modelo y el scaler
+        modelo_vuelo, scaler_vuelo = joblib.load(ruta_modelo)
+
+        fecha_viaje = st.session_state.get("fecha_viaje", datetime.date.today())
+        fecha_ordinal = fecha_viaje.toordinal()
+
+        # Crear el input con las dos características: fecha ordinal y distancia
+        X_pred_vuelo = np.array([[fecha_ordinal, distancia]])
+        X_pred_vuelo_scaled = scaler_vuelo.transform(X_pred_vuelo)
+
+        # Predecir el precio del vuelo
+        precio_vuelo = max(0, modelo_vuelo.predict(X_pred_vuelo_scaled)[0])
+
+    except Exception as e:
+        st.error(f"No se pudo cargar el modelo para la clase {modelo_clase.lower()}: {e}")
+        precio_vuelo = distancia * 0.1  # Fallback simple
+
+
+    st.session_state.resultado = {
+        "vuelo": precio_vuelo,
+        "hospedaje": precio_total,
+        "dias": dias,
+        "precio_noche": precio_noche
+    }
+    st.session_state.paso = 5
+    st.rerun()
 
     if st.button("Regresar", key="reg3"):
         st.session_state.paso = 3
-        st.experimental_rerun()
+        st.rerun()
+
 
 elif st.session_state.paso == 5:
     res = st.session_state.get("resultado", None)
@@ -216,4 +254,4 @@ elif st.session_state.paso == 5:
             if key in st.session_state:
                 del st.session_state[key]
         st.session_state.paso = 1
-        st.experimental_rerun()
+        st.rerun()
