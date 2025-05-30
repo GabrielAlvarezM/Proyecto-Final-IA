@@ -2,25 +2,24 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.patches import Patch
+from sklearn.preprocessing import StandardScaler
+from datetime import datetime
 import joblib
 
-
+# Función para filtrar por ciudad
 def filtrar_por_ciudad(diccionario, ciudad):
-    filtrado = {col: [] for col in diccionario if col != 'Tipo_Hospedaje_Num'}
-    if 'Tipo_Hospedaje_Num' in diccionario:
-        filtrado['Tipo_Hospedaje_Num'] = []
-
+    filtrado = {col: [] for col in diccionario}
     for i, nombre_ciudad in enumerate(diccionario['Ciudad']):
         if nombre_ciudad == ciudad:
             for col in diccionario:
                 filtrado[col].append(diccionario[col][i])
     return filtrado
 
+# Cargar datos
 datos_vuelos = pd.read_csv('.\\Datasets\\vuelos_historicos_mundo.csv')
 datos_hospedaje = pd.read_csv('.\\Datasets\\precios_hospedaje_mundial.csv')
 
+# Mapear tipos de hospedaje
 tipo_a_num = {
     'Hostal': 0,
     'Hotel 2 estrellas': 1,
@@ -29,99 +28,67 @@ tipo_a_num = {
     'Hotel 5 estrellas': 4,
     'Airbnb': 0.5
 }
-
 datos_hospedaje['Tipo_Hospedaje_Num'] = datos_hospedaje['Tipo_Hospedaje'].map(tipo_a_num)
 
-
-diccionarioVuelos = {}
-diccionarioHospedaje = {}
-
 # Convertir DataFrames a diccionarios
-for columna in datos_vuelos.columns:
-    diccionarioVuelos[columna] = datos_vuelos[columna].values.tolist()
+diccionarioVuelos = datos_vuelos.to_dict(orient='list')
+diccionarioHospedaje = datos_hospedaje.to_dict(orient='list')
 
-for columna in datos_hospedaje.columns:
-    diccionarioHospedaje[columna] = datos_hospedaje[columna].values.tolist()
+# Añadir columna fecha ordinal (vuelos y hospedaje)
+diccionarioVuelos['Fecha_Ordinal'] = pd.to_datetime(diccionarioVuelos['Fecha']).map(datetime.toordinal).tolist()
+diccionarioHospedaje['Fecha_Ordinal'] = pd.to_datetime(diccionarioHospedaje['Fecha']).map(datetime.toordinal).tolist()
 
-# Extraer fechas en listas separadas
-diccionarioVuelos['anio'] = []
-diccionarioVuelos['mes'] = []
-diccionarioVuelos['dia'] = []
+# Separar vuelos por clase
+def clasificar_por_clase(diccionario):
+    clases = {0: {}, 1: {}, 2: {}}
+    for clase in clases:
+        clases[clase] = {col: [] for col in diccionario}
 
-for fecha in diccionarioVuelos['Fecha']:
-    diccionarioVuelos['anio'].append(fecha[0:4])
-    diccionarioVuelos['mes'].append(fecha[5:7])
-    diccionarioVuelos['dia'].append(fecha[8:10])
+    for i, valor in enumerate(diccionario['Clase']):
+        for col in diccionario:
+            clases[valor][col].append(diccionario[col][i])
+    return clases[0], clases[1], clases[2]
 
-diccionarioHospedaje['anio'] = []
-diccionarioHospedaje['mes'] = []
-diccionarioHospedaje['dia'] = []
+diccionarioVuelosEconomica, diccionarioVuelosEjecutiva, diccionarioVuelosPrimClase = clasificar_por_clase(diccionarioVuelos)
 
-for fecha in diccionarioHospedaje['Fecha']:
-    diccionarioHospedaje['anio'].append(fecha[0:4])
-    diccionarioHospedaje['mes'].append(fecha[5:7])
-    diccionarioHospedaje['dia'].append(fecha[8:10])
+# Función para entrenar modelo de regresión lineal
+def entrenar_modelo(X_raw, Y, descripcion, ruta_modelo):
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X_raw)
+    modelo = LinearRegression().fit(X, Y)
+    score = modelo.score(X, Y)
+    print(f"Puntuación regresión múltiple - {descripcion}: {score}")
+    joblib.dump((modelo, scaler), ruta_modelo)
+    return modelo, scaler
 
-# Clasificar vuelos por clase
-diccionarioVuelosEconomica = {col: [] for col in diccionarioVuelos}
-diccionarioVuelosEjecutiva = {col: [] for col in diccionarioVuelos}
-diccionarioVuelosPrimClase = {col: [] for col in diccionarioVuelos}
+# ========= Regresiones de vuelos =========
+# Económica
+fecha_ord = np.array(diccionarioVuelosEconomica['Fecha_Ordinal']).reshape(-1, 1)
+dist = np.array(diccionarioVuelosEconomica['Distancia_km']).reshape(-1, 1)
+precio = np.array(diccionarioVuelosEconomica['Precio_USD'])
+X_combinada = np.column_stack((fecha_ord, dist))
+entrenar_modelo(X_combinada, precio, 'Vuelos Económica (fecha ordinal y distancia)', 'models/modelo_vuelo_economica.pkl')
 
-for i, clase in enumerate(diccionarioVuelos['Clase']):
-    if clase == 0:
-        for col in diccionarioVuelos:
-            diccionarioVuelosEconomica[col].append(diccionarioVuelos[col][i])
-    elif clase == 1:
-        for col in diccionarioVuelos:
-            diccionarioVuelosEjecutiva[col].append(diccionarioVuelos[col][i])
-    elif clase == 2:
-        for col in diccionarioVuelos:
-            diccionarioVuelosPrimClase[col].append(diccionarioVuelos[col][i])
+# Ejecutiva
+fecha_ord = np.array(diccionarioVuelosEjecutiva['Fecha_Ordinal']).reshape(-1, 1)
+dist = np.array(diccionarioVuelosEjecutiva['Distancia_km']).reshape(-1, 1)
+precio = np.array(diccionarioVuelosEjecutiva['Precio_USD'])
+X_combinada = np.column_stack((fecha_ord, dist))
+entrenar_modelo(X_combinada, precio, 'Vuelos Ejecutiva (fecha ordinal y distancia)', 'models/modelo_vuelo_ejecutiva.pkl')
 
-# Regresión Vuelos economicos
-Z = np.array(list(map(int, diccionarioVuelosEconomica['anio']))).reshape(-1, 1)
-X = np.array(diccionarioVuelosEconomica['Distancia_km']).reshape(-1, 1)
-Y = np.array(diccionarioVuelosEconomica['Precio_USD'])
+# Primera clase
+fecha_ord = np.array(diccionarioVuelosPrimClase['Fecha_Ordinal']).reshape(-1, 1)
+dist = np.array(diccionarioVuelosPrimClase['Distancia_km']).reshape(-1, 1)
+precio = np.array(diccionarioVuelosPrimClase['Precio_USD'])
+X_combinada = np.column_stack((fecha_ord, dist))
+entrenar_modelo(X_combinada, precio, 'Vuelos Primera Clase (fecha ordinal y distancia)', 'models/modelo_vuelo_primera.pkl')
 
-X_Combinada = np.column_stack((Z, X))
-modelo_vuelo_economica = LinearRegression().fit(X_Combinada, Y)
-print(f"Puntuacion regresion multiple (Año y Distancia) economicos: {modelo_vuelo_economica.score(X_Combinada, Y)}")
-joblib.dump(modelo_vuelo_economica, 'models/modelo_vuelo_economica.pkl')
-
-# Regresión Vuelos ejecutivos
-Z = np.array(list(map(int, diccionarioVuelosEjecutiva['anio']))).reshape(-1, 1)
-X = np.array(diccionarioVuelosEjecutiva['Distancia_km']).reshape(-1, 1)
-Y = np.array(diccionarioVuelosEjecutiva['Precio_USD'])
-
-X_Combinada = np.column_stack((Z, X))
-modelo_vuelo_ejecutiva = LinearRegression().fit(X_Combinada, Y)
-print(f"Puntuacion regresion multiple (Año y Distancia) ejecutivos: {modelo_vuelo_ejecutiva.score(X_Combinada, Y)}")
-joblib.dump(modelo_vuelo_ejecutiva, 'models/modelo_vuelo_ejecutiva.pkl')
-
-# Regresión Vuelos primera
-Z = np.array(list(map(int, diccionarioVuelosPrimClase['anio']))).reshape(-1, 1)
-X = np.array(diccionarioVuelosPrimClase['Distancia_km']).reshape(-1, 1)
-Y = np.array(diccionarioVuelosPrimClase['Precio_USD'])
-
-X_Combinada = np.column_stack((Z, X))
-modelo_vuelo_primera = LinearRegression().fit(X_Combinada, Y)
-print(f"Puntuacion regresion multiple (Año y Distancia) primera clase: {modelo_vuelo_primera.score(X_Combinada, Y)}")
-joblib.dump(modelo_vuelo_primera, 'models/modelo_vuelo_primera.pkl')
-
-print( len(next(iter(diccionarioVuelosEconomica.values()))) )
-print( len(next(iter(diccionarioVuelosEjecutiva.values()))) )
-print( len(next(iter(diccionarioVuelosPrimClase.values()))) )
-
-# Regresión hospedaje
-
+# ========= Regresión de hospedaje =========
 ciudad = 'Moscú'
 diccionarioHospedajeEspecifico = filtrar_por_ciudad(diccionarioHospedaje, ciudad)
 
-Z = np.array(diccionarioHospedajeEspecifico['anio'], dtype=int).reshape(-1, 1)
-X = np.array(diccionarioHospedajeEspecifico['Tipo_Hospedaje_Num'], dtype=float).reshape(-1, 1)
-Y = np.array(diccionarioHospedajeEspecifico['Precio_Noche_USD'], dtype=float)
-
-X_Combinada = np.column_stack((Z, X))
-modelo_hospedaje = LinearRegression().fit(X_Combinada, Y)
-print(f"Puntuacion regresion multiple (Año y Tipo hospedaje) general: {modelo_hospedaje.score(X_Combinada, Y)}")
-joblib.dump(modelo_hospedaje, 'models/modelo_hospedaje_general.pkl')
+fecha_ord = np.array(diccionarioHospedajeEspecifico['Fecha_Ordinal']).reshape(-1, 1)
+tipo = np.array(diccionarioHospedajeEspecifico['Tipo_Hospedaje_Num']).reshape(-1, 1)
+precio = np.array(diccionarioHospedajeEspecifico['Precio_Noche_USD'])
+X_combinada = np.column_stack((fecha_ord, tipo))
+entrenar_modelo(X_combinada, precio, f'Hospedaje en {ciudad} (fecha ordinal y tipo)', 'models/modelo_hospedaje_general.pkl')
